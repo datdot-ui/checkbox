@@ -4,7 +4,7 @@ DatDot UI component
 Opts
 ---
 
-`{  }`
+`{ checked = false, theme }`
 
 Incomming message types
 ---
@@ -16,4 +16,4 @@ Outgoing message types
 
 **parent**
 - `ready`
-- `input`
+- `click`
