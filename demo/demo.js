@@ -2,7 +2,6 @@ const head = require('head')()
 const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
-const logs = require('datdot-ui-logs')
 const checkbox = require('..')
 const message_maker = require('message-maker')
 
