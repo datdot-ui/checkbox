@@ -9,11 +9,16 @@ Opts
 Incomming message types
 ---
 
-- `enabled/disabled`
-
 Outgoing message types
 ---
 
 **parent**
 - `ready`
 - `click`
+
+
+States
+---
+
+- checked
+- unchecked

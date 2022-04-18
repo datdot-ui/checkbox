@@ -27,7 +27,7 @@ function demo () {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
         inbox[head.join('/')] = msg                  // store msg
-        if (type === 'click') console.log({ is_checked: data.value})
+        if (type === 'click') console.log({ status: data.status})
     }
 // ---------------------------------------------------------------
     const checkbox1 = checkbox({

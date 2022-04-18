@@ -28,7 +28,7 @@ function demo () {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
         inbox[head.join('/')] = msg                  // store msg
-        if (type === 'click') console.log({ is_checked: data.value})
+        if (type === 'click') console.log({ status: data.status})
     }
 // ---------------------------------------------------------------
     const checkbox1 = checkbox({
@@ -1550,9 +1550,7 @@ module.exports = checkbox
 
 function checkbox (opts, protocol) {
     const { checked = false, theme } = opts
-    const status = {
-        is_checked: checked,
-    }
+    var status = checked ? 'checked' : 'unchecked'
 
 /* ------------------------------------------------
                     <protocol>
@@ -1611,11 +1609,21 @@ function checkbox (opts, protocol) {
     function handle_focus (e, input) {}
     // input click event
     function handle_click (e) {
-        status.is_checked = e.target.checked
-        message = make({ to: address, type: 'click', data: {value: status.is_checked }})
+        const new_status = e.target.checked ? 'checked' : 'unchecked'
+        set_status(new_status)
+        message = make({ to: address, type: 'click', data: { status }})
         notify(message)
     }
     
+    const set_status = new_status => {
+        const state_machine = {
+            'checked': ['unchecked'],
+            'unchecked': ['checked']
+        }
+        if (!state_machine[status].includes(new_status)) throw new Error('invalid state transition')
+        status = new_status
+    }
+
    // insert CSS style
    const custom_style = theme ? theme.style : ''
    // set CSS variables
