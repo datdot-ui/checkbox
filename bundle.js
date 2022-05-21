@@ -4,39 +4,29 @@ const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
 const checkbox = require('..')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 var count = 0
 
 function demo () {
 // ---------------------------------------------------------------
-    const myaddress = `demo-${id++}`
-    const inbox = {}
-    const outbox = {}
-    let recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 
-    function make_protocol (name) {
-        return function protocol (address, notify) {
-            recipients[name] = { address, notify, make: message_maker(myaddress) }
-            return { notify: listen, address: myaddress }
-        }
-    }
+    const contacts = protocol_maker('demo', listen)
+
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        inbox[head.join('/')] = msg                  // store msg
         if (type === 'click') console.log({ status: data.status})
     }
 // ---------------------------------------------------------------
     const checkbox1 = checkbox({
         checked: false
-    }, make_protocol(`checkbox-${count++}`))
+    }, contacts.add(`checkbox-${count++}`))
     // ---------------------------------------------------------------
     const checkbox2 = checkbox({
         checked: true
-    }, make_protocol(`checkbox-${count++}`))
+    }, contacts.add(`checkbox-${count++}`))
 // ---------------------------------------------------------------
     // content
     const content = bel`
@@ -212,7 +202,7 @@ body {
 document.body.append(demo())
 // ---------------------------------------------------------------
 
-},{"..":28,"bel":4,"csjs-inject":7,"head":2,"message-maker":24}],2:[function(require,module,exports){
+},{"..":29,"bel":4,"csjs-inject":7,"head":2,"protocol-maker":25}],2:[function(require,module,exports){
 module.exports = head
 
 function head (lang = 'utf8', title = 'Input - DatDot UI') {
@@ -456,7 +446,7 @@ module.exports = hyperx(belCreateElement, {comments: true})
 module.exports.default = module.exports
 module.exports.createElement = belCreateElement
 
-},{"./appendChild":3,"hyperx":26}],5:[function(require,module,exports){
+},{"./appendChild":3,"hyperx":27}],5:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -475,7 +465,7 @@ function csjsInserter() {
 module.exports = csjsInserter;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"csjs":10,"insert-css":27}],6:[function(require,module,exports){
+},{"csjs":10,"insert-css":28}],6:[function(require,module,exports){
 'use strict';
 
 module.exports = require('csjs/get-css');
@@ -961,6 +951,139 @@ module.exports = function message_maker (from) {
   }
 }
 },{}],25:[function(require,module,exports){
+// const path = require('path')
+// const filename = path.basename(__filename)
+const message_maker = require('message-maker')
+// const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
+
+module.exports = protocol_maker
+
+const routes = {}
+var id = 0
+
+function protocol_maker (type, listen, initial_contacts = {}) {
+  if (!type || typeof type !== 'string') throw new Error('invalid type')
+  const myaddress = id++
+
+  const inbox = {}
+  const outbox = {}
+
+  const by_name = {}
+  const by_address = {}
+  const contacts = { add, by_name, by_address, cut, on }
+  
+  const keys = Object.keys(initial_contacts)
+  for (var i = 0, len = keys.length; i < len; i++) {
+    const name = keys[i]
+    const wire = initial_contacts[name]
+    // @INFO: perspective of sub instance:
+    const { notify, address } = wire(myaddress, wrap_listen(listen))    
+    const contact = {
+      name,
+      address,
+      // path: `${myaddress}/${name}`,
+      notify: wrap_notify(notify),
+      make: message_maker(myaddress)
+    }
+    by_name[name] = by_address[address] = contact // new Promise(resolve => resolve(contact))
+  }
+  return contacts
+  function on (listener) {
+    // @NOTE: to listen to any "default protocol events" supported by any protocol, e.g. help
+    // maybe also: 'connect', or 'disconnect'
+    throw new Error ('`on` is not yet implemented')
+    return function off () {}
+  }
+  function cut (wire) { throw new Error ('`cut` is not yet implemented')}
+  function add (name) {
+    // @INFO: perspective of instance:
+    if (!name || typeof name !== 'string') throw new Error('invalid name')
+    if (by_name[name]) throw new Error('name already exists')
+    const wait = {}
+    by_name[name] = { name, make: message_maker(myaddress) } // new Promise((resolve, reject) => { wait.resolve = resolve; wait.reject = reject })
+    return function wire (address, notify) {
+      const contact = {
+        // @TODO: add queryable "routes" and allow lookup `by_route[route]`       
+        name, // a nickname dev gives to a component
+        address, // an address app makes for each component
+        // TODO: address will become "name" (like type) compared to nickname
+        // address: something new, based on e.g. filepath or browserified bundle.js:22:42 etc.. to give actual globally unique identifier
+        notify: wrap_notify(notify),
+        make: message_maker(myaddress)
+      }
+      // wait.resolve(contact)
+      by_name[name].address = address
+      by_name[name].notify = wrap_notify(notify)
+      by_address[address] = contact // new Promise(resolve => resolve(contact))
+      return { notify: wrap_listen(listen), address: myaddress }
+    }
+  }
+  function wrap_notify (notify) {
+    return message => {
+      outbox[message.head.join('/')] = message  // store message
+      return notify(message)
+    }
+  }
+  function wrap_listen (listen) {
+    return message => {
+      inbox[message.head.join('/')] = message  // store message
+      return listen(message)
+    }
+  }
+}
+/*
+const name_routes = [
+  "root/",
+  "root/el:demo/",
+  "root/el:demo/cpu:range-slider/",
+  "root/el:demo/cpu:range-slider/%:input-number/",
+  "root/el:demo/ram:range-slider/",
+  "root/el:demo/ram:range-slider/GB:input-number/",
+  "root/el:demo/upload:range-slider/",
+  "root/el:demo/upload:range-slider/MB:input-number/",
+  "root/el:demo/download:range-slider/",
+  "root/el:demo/download:range-slider/MB:input-number/",  
+]
+// --------------------------------------------------
+const name_routes = {
+    root: {
+        "el:demo": {
+            "cpu:range-slider": {
+                "%:input-number": {}
+            },
+            "ram:range-slider": {
+                "GB:input-number": {}
+            },
+            "download:range-slider": {
+                "MB:input-number": {}
+            },
+            "upload:range-slider": {
+                "MB:input-number": {}
+            },
+        },
+    },
+}
+// --------------------------------------------------
+const name_routes = {
+    root: {
+        "el": {
+            "cpu": {
+                "%": {}
+            },
+            "ram": {
+                "GB": {}
+            },
+            "download": {
+                "MB": {}
+            },
+            "upload": {
+                "MB": {}
+            },
+        },
+    },
+}
+*/
+},{"message-maker":24}],26:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -981,7 +1104,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -1278,7 +1401,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":25}],27:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":26}],28:[function(require,module,exports){
 var inserted = {};
 
 module.exports = function (css, options) {
@@ -1302,40 +1425,29 @@ module.exports = function (css, options) {
     }
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 
 module.exports = checkbox
 
-function checkbox (opts, protocol) {
+function checkbox (opts, parent_wire) {
     const { checked = false, theme } = opts
     var status = checked ? 'checked' : 'unchecked'
 
 /* ------------------------------------------------
                     <protocol>
 ------------------------------------------------ */
-    const myaddress = `checkbox-${id++}` // unique
-    const inbox = {}
-    const outbox = {}
-    const recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 
-    const {notify, address} = protocol(myaddress, listen)
-    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
-
-    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
-    let message = make({ to: address, type: 'ready' })
-    notify(message)
+    const initial_contacts = { 'parent': parent_wire }
+    const contacts = protocol_maker('input-number', listen, initial_contacts)
 
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
-        inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
         // todo: what happens when we receive the message
-        const { notify, make, address } = recipients['parent']
     }
 /* ------------------------------------------------
                     </protocol>
@@ -1373,8 +1485,8 @@ function checkbox (opts, protocol) {
     function handle_click (e) {
         const new_status = e.target.checked ? 'checked' : 'unchecked'
         set_status(new_status)
-        message = make({ to: address, type: 'click', data: { status }})
-        notify(message)
+        const $parent = contacts.by_name['parent']
+        $parent.notify($parent.make({ to: $parent.address, type: 'click', data: { status }}))
     }
     
     const set_status = new_status => {
@@ -1445,7 +1557,7 @@ function checkbox (opts, protocol) {
 // ---------------------------------------------------------------
 }
 
-},{"message-maker":24,"support-style-sheet":29}],29:[function(require,module,exports){
+},{"protocol-maker":25,"support-style-sheet":30}],30:[function(require,module,exports){
 module.exports = support_style_sheet
 function support_style_sheet (root, style) {
     return (() => {

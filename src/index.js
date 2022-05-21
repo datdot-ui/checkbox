@@ -1,36 +1,25 @@
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 
 module.exports = checkbox
 
-function checkbox (opts, protocol) {
+function checkbox (opts, parent_wire) {
     const { checked = false, theme } = opts
     var status = checked ? 'checked' : 'unchecked'
 
 /* ------------------------------------------------
                     <protocol>
 ------------------------------------------------ */
-    const myaddress = `checkbox-${id++}` // unique
-    const inbox = {}
-    const outbox = {}
-    const recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 
-    const {notify, address} = protocol(myaddress, listen)
-    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
-
-    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
-    let message = make({ to: address, type: 'ready' })
-    notify(message)
+    const initial_contacts = { 'parent': parent_wire }
+    const contacts = protocol_maker('input-number', listen, initial_contacts)
 
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
-        inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
         // todo: what happens when we receive the message
-        const { notify, make, address } = recipients['parent']
     }
 /* ------------------------------------------------
                     </protocol>
@@ -68,8 +57,8 @@ function checkbox (opts, protocol) {
     function handle_click (e) {
         const new_status = e.target.checked ? 'checked' : 'unchecked'
         set_status(new_status)
-        message = make({ to: address, type: 'click', data: { status }})
-        notify(message)
+        const $parent = contacts.by_name['parent']
+        $parent.notify($parent.make({ to: $parent.address, type: 'click', data: { status }}))
     }
     
     const set_status = new_status => {

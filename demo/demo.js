@@ -3,39 +3,29 @@ const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
 const checkbox = require('..')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 var count = 0
 
 function demo () {
 // ---------------------------------------------------------------
-    const myaddress = `demo-${id++}`
-    const inbox = {}
-    const outbox = {}
-    let recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 
-    function make_protocol (name) {
-        return function protocol (address, notify) {
-            recipients[name] = { address, notify, make: message_maker(myaddress) }
-            return { notify: listen, address: myaddress }
-        }
-    }
+    const contacts = protocol_maker('demo', listen)
+
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        inbox[head.join('/')] = msg                  // store msg
         if (type === 'click') console.log({ status: data.status})
     }
 // ---------------------------------------------------------------
     const checkbox1 = checkbox({
         checked: false
-    }, make_protocol(`checkbox-${count++}`))
+    }, contacts.add(`checkbox-${count++}`))
     // ---------------------------------------------------------------
     const checkbox2 = checkbox({
         checked: true
-    }, make_protocol(`checkbox-${count++}`))
+    }, contacts.add(`checkbox-${count++}`))
 // ---------------------------------------------------------------
     // content
     const content = bel`
