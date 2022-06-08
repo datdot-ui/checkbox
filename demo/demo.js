@@ -5,7 +5,6 @@ const csjs = require('csjs-inject')
 const checkbox = require('..')
 const protocol_maker = require('protocol-maker')
 
-var id = 0
 var count = 0
 
 function demo () {
@@ -16,21 +15,34 @@ function demo () {
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        if (type === 'click') console.log({ status: data.status})
+        const $from = contacts.by_address[from]
+        if (type === 'click') {
+            console.log({ checked: data.checked})
+            if ($from.name === 'checkbox-0') { 
+                // if checkbox 0 is click, notify checkbox 1 to copy the status to  itself
+                const $other = contacts.by_name['checkbox-1']
+                $other.notify($other.make({ to: $other.address, type: 'update', data: { status: { checked: data.checked }}}))
+            }
+            // if checkbox 1 is clicked i.e., send help message to get the current state
+            if ($from.name === 'checkbox-1') $from.notify($from.make({ to: $from.address, type: 'help' }))
+        }
+        if (type === 'help') { console.log('Help reponse - current state', data) }
     }
 // ---------------------------------------------------------------
     const checkbox1 = checkbox({
-        checked: false
     }, contacts.add(`checkbox-${count++}`))
     // ---------------------------------------------------------------
     const checkbox2 = checkbox({
-        checked: true
+        status: { disabled: true }
     }, contacts.add(`checkbox-${count++}`))
 // ---------------------------------------------------------------
     // content
     const content = bel`
         <div class=${css.content}>
-            <section> <h2>Checkbox 1</h2> ${checkbox1} </section>
+            <section> 
+                <h2>Checkbox 1</h2> 
+                ${checkbox1}
+            </section>
             <section> <h2>Checkbox 2</h2> ${checkbox2} </section>
         </div>`
     const container = bel`<div class="${css.container}">${content}</div>`

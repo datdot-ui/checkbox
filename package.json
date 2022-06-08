@@ -1,7 +1,7 @@
 {
   "name": "datdot-ui-checkbox",
-  "version": "0.0.3-alpha",
-  "description": "Checkbox widget for datdot-ui",
+  "version": "0.0.4-alpha",
+  "description": "vanilla js checkbox component",
   "main": "src/index.js",
   "scripts": {
     "start": "budo demo/demo.js:bundle.js --open --live",

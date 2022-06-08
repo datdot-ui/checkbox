@@ -4,21 +4,18 @@ DatDot UI component
 Opts
 ---
 
-`{ checked = false, theme }`
+`{ status: { checked = false, disabled = false } theme = default_theme }`
 
-Incomming message types
+Incoming message types
 ---
+
+`help` requests info on current state
+`update`
 
 Outgoing message types
 ---
 
 **parent**
-- `ready`
-- `click`
 
-
-States
----
-
-- checked
-- unchecked
+`help` sends info on current state
+`click` updates the parent every time the checkbox is clicked
