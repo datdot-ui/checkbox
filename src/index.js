@@ -5,7 +5,6 @@ const sheet = new CSSStyleSheet()
 const default_opts = { 
 	name: 'checkbox',
 	status: {
-		current: false, 
 		disabled: false,
 	},
 	theme: get_theme()
